@@ -1,0 +1,5 @@
+bert_pretrain/*.bin 
+bert_pretrain/*.txt
+bert_pretrain/*.json
+
+THUCNews/
