@@ -69,7 +69,12 @@ def train(config, model, train_iter, dev_iter, test_iter):
                     improve = ''
                 time_dif = get_time_dif(start_time)
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                print(msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, time_dif, improve))
+                msg = msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, time_dif, improve)
+                # Log
+                with open('log.txt', mode='a+') as f:
+                    f.write(f'{msg}\n')
+                    f.close()
+                print(msg)
                 model.train()
             total_batch += 1
             if total_batch - last_improve > config.require_improvement:
