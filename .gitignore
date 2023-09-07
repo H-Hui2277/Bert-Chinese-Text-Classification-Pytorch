@@ -8,3 +8,4 @@ THUCNews/saved_dict/
 *.ipynb
 
 __pycache__/
+log.txt
