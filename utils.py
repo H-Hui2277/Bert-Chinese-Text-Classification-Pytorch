@@ -16,7 +16,7 @@ def build_dataset(config):
                 lin = line.strip()
                 if not lin:
                     continue
-                content, label = lin.split('\t')
+                content, label = lin.split(' ')
                 token = config.tokenizer.tokenize(content)
                 token = [CLS] + token
                 seq_len = len(token)

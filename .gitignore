@@ -3,3 +3,7 @@ bert_pretrain/*.txt
 bert_pretrain/*.json
 
 THUCNews/
+
+*.ipynb
+
+__pycache__/
