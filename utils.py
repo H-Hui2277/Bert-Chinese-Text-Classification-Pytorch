@@ -1,16 +1,28 @@
 # coding: UTF-8
-import torch
-from tqdm import tqdm
 import time
 from datetime import timedelta
+import pickle
+import os
+
+import torch
+from tqdm import tqdm
+
 
 PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
 
 
 def build_dataset(config):
 
-    def load_dataset(path, pad_size=32):
+    def load_dataset(path, pad_size=32, pre_loaded=True):
         contents = []
+        pre_load_path = path.replace('.txt', '.pkl')
+        if pre_loaded:
+            if os.path.exists(pre_load_path):
+                with open(pre_load_path, mode='rb') as f:
+                    contents = pickle.load(f)
+                    f.close()
+                print(f'Get the data from {pre_load_path}')
+                return contents
         with open(path, 'r', encoding='UTF-8') as f:
             for line in tqdm(f):
                 lin = line.strip()
@@ -32,6 +44,11 @@ def build_dataset(config):
                         token_ids = token_ids[:pad_size]
                         seq_len = pad_size
                 contents.append((token_ids, int(label), seq_len, mask))
+        if pre_loaded:
+            with open(pre_load_path, mode='wb') as f:
+                pickle.dump(contents, f)
+                f.close()
+            print(f'Save data to {pre_load_path}')
         return contents
     train = load_dataset(config.train_path, config.pad_size)
     dev = load_dataset(config.dev_path, config.pad_size)
