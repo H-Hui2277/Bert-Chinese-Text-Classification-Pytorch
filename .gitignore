@@ -1,6 +1,7 @@
 bert_pretrain/*.bin 
 bert_pretrain/*.txt
 bert_pretrain/*.json
+*.zip
 
 THUCNews/data/
 THUCNews/saved_dict*/
