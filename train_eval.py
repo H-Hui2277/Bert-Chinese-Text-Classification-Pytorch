@@ -57,7 +57,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
             loss = F.cross_entropy(outputs, labels)
             loss.backward()
             optimizer.step()
-            if total_batch % 500 == 0:
+            if total_batch % 500 == 0 and total_batch != 0:
                 # 每多少轮输出在训练集和验证集上的效果
                 true = labels.data.cpu()
                 predic = torch.max(outputs.data, 1)[1].cpu()
@@ -90,7 +90,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
 
 def test(config, model, test_iter):
     # test
-    model.load_state_dict(torch.load(config.save_path))
+    model.load_state_dict(torch.load(os.path.join(config.save_path, 'best_test.pt')))
     model.eval()
     start_time = time.time()
     test_acc, test_loss, test_report, test_confusion = evaluate(config, model, test_iter, test=True)
