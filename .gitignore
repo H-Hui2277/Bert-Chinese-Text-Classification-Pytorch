@@ -3,7 +3,7 @@ bert_pretrain/*.txt
 bert_pretrain/*.json
 
 THUCNews/data/
-THUCNews/saved_dict/
+THUCNews/saved_dict*/
 
 *.ipynb
 

@@ -1,10 +1,13 @@
 # coding: UTF-8
+import os
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn import metrics
-import time
+
 from utils import get_time_dif
 from pytorch_pretrained.optimization import BertAdam
 
@@ -42,8 +45,8 @@ def train(config, model, train_iter, dev_iter, test_iter):
                          warmup=0.05,
                          t_total=len(train_iter) * config.num_epochs)
     total_batch = 0  # 记录进行到多少batch
-    dev_best_loss = float('inf')
-    last_improve = 0  # 记录上次验证集loss下降的batch数
+    dev_best_acc = 0.
+    test_best_acc = 0.
     flag = False  # 记录是否很久没有效果提升
     model.train()
     for epoch in range(config.num_epochs):
@@ -54,36 +57,34 @@ def train(config, model, train_iter, dev_iter, test_iter):
             loss = F.cross_entropy(outputs, labels)
             loss.backward()
             optimizer.step()
-            if total_batch % 100 == 0:
+            if total_batch % 500 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
                 true = labels.data.cpu()
                 predic = torch.max(outputs.data, 1)[1].cpu()
                 train_acc = metrics.accuracy_score(true, predic)
+
+                improve = ''
                 dev_acc, dev_loss = evaluate(config, model, dev_iter)
-                if dev_loss < dev_best_loss:
-                    dev_best_loss = dev_loss
-                    torch.save(model.state_dict(), config.save_path)
-                    improve = '*'
-                    last_improve = total_batch
-                else:
-                    improve = ''
+                if dev_acc > dev_best_acc:
+                    dev_best_acc = dev_acc
+                    torch.save(model.state_dict(), os.path.join(config.save_path, 'best_val.pt'))
+                    improve += '*'
+                test_acc, test_loss = evaluate(config, model, test_iter)
+                if test_acc > test_best_acc:
+                    test_best_acc = test_acc
+                    torch.save(model.state_dict(), os.path.join(config.save_path, 'best_test.pt'))
+                    improve += '^'
+
                 time_dif = get_time_dif(start_time)
-                msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                msg = msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, time_dif, improve)
+                msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%}, Test Loss: {5:>5.2}, Test Acc: {6:>6.2%}  Time: {7} {8}'
+                msg = msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, test_loss, test_acc, time_dif, improve)
                 # Log
-                with open('log.txt', mode='a+') as f:
+                with open(os.path.join(config.save_path, 'log.txt'), mode='a+') as f:
                     f.write(f'{msg}\n')
                     f.close()
                 print(msg)
                 model.train()
             total_batch += 1
-            if total_batch - last_improve > config.require_improvement:
-                # 验证集loss超过1000batch没下降，结束训练
-                print("No optimization for a long time, auto-stopping...")
-                flag = True
-                break
-        if flag:
-            break
     test(config, model, test_iter)
 
 
