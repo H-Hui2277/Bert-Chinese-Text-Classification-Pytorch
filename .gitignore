@@ -1,6 +1,6 @@
-bert_pretrain*/*.bin 
-bert_pretrain*/*.txt
-bert_pretrain*/*.json
+*pretrain*/*.bin 
+*pretrain*/*.txt
+*pretrain*/*.json
 *.zip
 
 THUCNews/data/
