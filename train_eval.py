@@ -35,7 +35,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
     start_time = time.time()
     # log info
     with open(config.log_file, mode='a+') as f:
-        for k, v in dict(config):
+        for k, v in config.__dict__.items():
             f.write(f'{k}: {v}')
         f.close()
 
