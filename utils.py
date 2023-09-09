@@ -37,7 +37,7 @@ def build_dataset(config):
                     content1, content2, label = lin_items
                     token1 = config.tokenizer.tokenize(content1)
                     token2 = config.tokenizer.tokenize(content2)
-                    token = [CLS] + token1 + [PAD] + token2
+                    token = [CLS] + token1 + [SEP] + token2
                 else:
                     raise ValueError(f'{lin_items} is supposed to have 2 or 3 items.')
 
