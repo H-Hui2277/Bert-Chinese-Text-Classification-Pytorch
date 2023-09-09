@@ -47,7 +47,6 @@ def train(config, model, train_iter, dev_iter, test_iter):
     total_batch = 0  # 记录进行到多少batch
     dev_best_acc = 0.
     test_best_acc = 0.
-    flag = False  # 记录是否很久没有效果提升
     model.train()
     for epoch in range(config.num_epochs):
         print('Epoch [{}/{}]'.format(epoch + 1, config.num_epochs))
@@ -121,7 +120,7 @@ def evaluate(config, model, data_iter, test=False):
 
     acc = metrics.accuracy_score(labels_all, predict_all)
     if test:
-        report = metrics.classification_report(labels_all, predict_all, target_names=config.class_list, digits=4)
+        report = metrics.classification_report(labels_all, predict_all, labels=config.class_list, digits=4)
         confusion = metrics.confusion_matrix(labels_all, predict_all)
         return acc, loss_total / len(data_iter), report, confusion
     return acc, loss_total / len(data_iter)
