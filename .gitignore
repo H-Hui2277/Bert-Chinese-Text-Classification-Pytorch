@@ -3,6 +3,7 @@
 *pretrain*/*.json
 *.zip
 
+Dataset*/
 THUCNews/data/
 THUCNews/saved_dict*/
 
