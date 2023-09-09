@@ -36,7 +36,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
     # log info
     with open(config.log_file, mode='a+') as f:
         for k, v in config.__dict__.items():
-            f.write(f'{k}: {v}')
+            f.write(f'{k}: {v}\n')
         f.close()
 
     model.train()
@@ -62,7 +62,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
             loss = F.cross_entropy(outputs, labels)
             loss.backward()
             optimizer.step()
-            if total_batch % 500 == 0 and total_batch != 0:
+            if total_batch % 1000 == 0 and total_batch != 0:
                 # 每多少轮输出在训练集和验证集上的效果
                 true = labels.data.cpu()
                 predic = torch.max(outputs.data, 1)[1].cpu()
