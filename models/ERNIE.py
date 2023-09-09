@@ -20,6 +20,7 @@ class Config(object):
         self.save_path = dataset + f'/saved_dict_{time.strftime("%m%d-%H%M%S")}/'    # 模型训练结果
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
+        self.log_file = os.path.join(self.save_path, 'log.txt')
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   # 设备
 
         self.num_classes = len(self.class_list)                         # 类别数

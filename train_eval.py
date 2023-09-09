@@ -33,6 +33,12 @@ def init_network(model, method='xavier', exclude='embedding', seed=123):
 
 def train(config, model, train_iter, dev_iter, test_iter):
     start_time = time.time()
+    # log info
+    with open(config.log_file, mode='a+') as f:
+        for k, v in dict(config):
+            f.write(f'{k}: {v}')
+        f.close()
+
     model.train()
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
@@ -78,7 +84,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%}, Test Loss: {5:>5.2}, Test Acc: {6:>6.2%}  Time: {7} {8}'
                 msg = msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, test_loss, test_acc, time_dif, improve)
                 # Log
-                with open(os.path.join(config.save_path, 'log.txt'), mode='a+') as f:
+                with open(config.log_file, mode='a+') as f:
                     f.write(f'{msg}\n')
                     f.close()
                 print(msg)

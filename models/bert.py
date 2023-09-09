@@ -20,16 +20,17 @@ class Config(object):
         self.save_path = dataset + f'/saved_dict_{time.strftime("%m%d-%H%M%S")}/'    # 模型训练结果
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
+        self.log_file = os.path.join(self.save_path, 'log.txt')
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')   # 设备
 
-        self.num_classes = len(self.class_list)                          # 类别数
-        self.num_epochs = 3                                              # epoch数
-        self.batch_size = 16                                             # mini-batch大小
-        self.pad_size = 128                                              # 每句话处理成的长度(短填长切)
-        self.learning_rate = 1e-5                                        # 学习率
-        self.bert_path = './bert_pretrain_large/'
+        self.num_classes = len(self.class_list)                         # 类别数
+        self.num_epochs = 3                                             # epoch数
+        self.batch_size = 16                                            # mini-batch大小
+        self.pad_size = 128                                             # 每句话处理成的长度(短填长切)
+        self.learning_rate = 1e-5                                       # 学习率
+        self.bert_path = './bert_pretrain/'
         self.tokenizer = BertTokenizer.from_pretrained(self.bert_path)
-        self.hidden_size = 1024
+        self.hidden_size = 768
 
 
 class Model(nn.Module):
