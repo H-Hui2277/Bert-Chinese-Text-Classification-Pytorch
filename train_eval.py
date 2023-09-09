@@ -90,7 +90,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
 
 def test(config, model, test_iter):
     # test
-    model.load_state_dict(torch.load(os.path.join(config.save_path, 'best_test.pt')))
+    # model.load_state_dict(torch.load(os.path.join(config.save_path, 'best_test.pt')))
     model.eval()
     start_time = time.time()
     test_acc, test_loss, test_report, test_confusion = evaluate(config, model, test_iter, test=True)
