@@ -8,7 +8,7 @@ import torch
 from tqdm import tqdm
 
 
-PAD, CLS = '[PAD]', '[CLS]'  # padding符号, bert中综合信息符号
+PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
 
 
 def build_dataset(config):
