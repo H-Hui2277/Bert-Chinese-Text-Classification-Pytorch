@@ -28,9 +28,19 @@ def build_dataset(config):
                 lin = line.strip()
                 if not lin:
                     continue
-                content, label = lin.split(' ')
-                token = config.tokenizer.tokenize(content)
-                token = [CLS] + token
+                lin_items = lin.split(' ')
+                if len(lin_items) == 2:
+                    content, label = lin_items
+                    token = config.tokenizer.tokenize(content)
+                    token = [CLS] + token
+                elif len(lin_items) == 3:
+                    content1, content2, label = lin_items
+                    token1 = config.tokenizer.tokenize(content1)
+                    token2 = config.tokenizer.tokenize(content2)
+                    token = [CLS] + token1 + [PAD] + token2
+                else:
+                    raise ValueError(f'{lin_items} is supposed to have 2 or 3 items.')
+
                 seq_len = len(token)
                 mask = []
                 token_ids = config.tokenizer.convert_tokens_to_ids(token)
