@@ -146,7 +146,7 @@ def get_pattern(stop_words_file, encoding='utf-8'):
         pa_text = f'{word.strip()}|{pa_text}'
     return pa_text
 
-class Reformater(object):
+class Reformator(object):
     def __init__(self, remove_punc=True, stop_words_file=None, stop_words_encoding='utf-8'):
         '''
         remove_punc 是否删除字符串中的标点符号\n
@@ -158,10 +158,11 @@ class Reformater(object):
         self.pattern = get_pattern(stop_words_file, stop_words_encoding) \
             if stop_words_file is not None else None
             
-    def __call__(self, text):
+    def __call__(self, text:str):
         ''' text 输入中文字符串\n
         return 重新编码后的字符串\n
         '''
+        text = text.strip()
         if self.remove_punc:
             text = remove_punctutation(text)
         if self.pattern is not None:
