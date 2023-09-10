@@ -33,6 +33,8 @@ def init_network(model, method='xavier', exclude='embedding', seed=123):
 
 def train(config, model, train_iter, dev_iter, test_iter):
     start_time = time.time()
+    if not os.path.exists(config.save_path):
+        os.mkdir(config.save_path)
     # log info
     with open(config.log_file, mode='a+', encoding='utf-8') as f:
         for k, v in config.__dict__.items():
