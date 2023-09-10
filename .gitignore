@@ -6,8 +6,8 @@
 Dataset*/
 THUCNews/data/
 THUCNews/saved_dict*/
+test/
 
 *.ipynb
 
 __pycache__/
-log.txt

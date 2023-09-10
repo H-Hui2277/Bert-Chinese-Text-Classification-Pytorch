@@ -3,6 +3,7 @@ import time
 from datetime import timedelta
 import pickle
 import os
+import re
 
 import torch
 from tqdm import tqdm
@@ -122,3 +123,47 @@ def get_time_dif(start_time):
     end_time = time.time()
     time_dif = end_time - start_time
     return timedelta(seconds=int(round(time_dif)))
+
+
+"""字符串预处理工具方法"""
+def remove_punctutation(text):
+    ''' 删除字符串中标点符号
+    '''
+    return re.sub('[^\w\s]', '', text)
+
+def get_pattern(stop_words_file, encoding='utf-8'):
+    ''' 读取停用词表\n
+    stop_words_file 停用词表路径\n
+    return 停用词表的正则表达式\n
+    '''
+    with open(stop_words_file, mode='r', encoding=encoding) as f:
+        words = f.readlines()
+        f.close()
+    pa_text = ''
+    for word in words:
+        if remove_punctutation(word).strip() == '':
+            continue
+        pa_text = f'{word.strip()}|{pa_text}'
+    return pa_text
+
+class Reformater(object):
+    def __init__(self, remove_punc=True, stop_words_file=None, stop_words_encoding='utf-8'):
+        '''
+        remove_punc 是否删除字符串中的标点符号\n
+        stop_words_file 停用词表路径，为None时不使用停用词表\n
+        stop_words_encoding 停用词表的编码格式\n
+        return 返回重新编码后的字符串
+        '''
+        self.remove_punc = remove_punc
+        self.pattern = get_pattern(stop_words_file, stop_words_encoding) \
+            if stop_words_file is not None else None
+            
+    def __call__(self, text):
+        ''' text 输入中文字符串\n
+        return 重新编码后的字符串\n
+        '''
+        if self.remove_punc:
+            text = remove_punctutation(text)
+        if self.pattern is not None:
+            text = re.sub(self.pattern, '', text)
+        return text
