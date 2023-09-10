@@ -35,7 +35,7 @@ class Config(object):
 
 class Model(nn.Module):
 
-    def __init__(self, config):
+    def __init__(self, config:Config):
         super(Model, self).__init__()
         self.bert = BertModel.from_pretrained(config.bert_path)
         for param in self.bert.parameters():
