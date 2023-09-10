@@ -5,18 +5,19 @@ from models.ERNIE import Config, Model
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
 
 if __name__ == '__main__':
-    dataset = ''
-    checkpoint = ''
-    device = 'cpu'
-    text1 = ''
-    text2 = ''
+    dataset = './Dataset_baidu/'
+    checkpoint = './Dataset_baidu/saved_dict_0909-213159/best_test.pt'
+    device = 'cuda'
+    text1 = '句子一'
+    text2 = '句子二'
     pad_size = 128
     
-    config = Config()
+    config = Config(dataset)
     model = Model(config)
     
     # loading model...
     model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
+    model.to(device)
     
     # loading data...
     token1 = config.tokenizer.tokenize(text1.strip())
@@ -34,12 +35,13 @@ if __name__ == '__main__':
             token_ids = token_ids[:pad_size]
             seq_len = pad_size
     
-    x = torch.LongTensor(token_ids).to(device)
-    seq_len = torch.LongTensor(seq_len).to(device)
-    mask = torch.LongTensor(mask).to(device)
+    x = torch.LongTensor(token_ids).view(1, -1).to(device)
+    seq_len = torch.LongTensor(seq_len).view(1, -1).to(device)
+    mask = torch.LongTensor(mask).view(1, -1).to(device)
     sample = (x, seq_len, mask)
     
     # computing...
     outputs = model(sample)
     predict = torch.argmax(outputs, dim=1).cpu()
-    print(predict)
+    predict_class = config.class_list[predict.item()]
+    print(predict_class)
