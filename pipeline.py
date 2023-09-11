@@ -17,6 +17,7 @@ class Predictor(object):
         self.pad_size = pad_size
         self.reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding)
     
+    @torch.no_grad()
     def __call__(self, text1:str, text2:str):
         text1, text2 = self.reformator(text1), self.reformator(text2)
         token1 = self.config.tokenizer.tokenize(text1)
@@ -37,7 +38,7 @@ class Predictor(object):
         seq_len = torch.LongTensor(seq_len).view(1, -1).to(self.device)
         mask = torch.LongTensor(mask).view(1, -1).to(self.device)
         sample = (x, seq_len, mask)
-
+        
         outputs = self.model(sample)
         predict = torch.argmax(outputs, dim=1).cpu()
         predict_class = self.config.class_list[predict.item()]
