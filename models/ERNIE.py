@@ -37,13 +37,13 @@ class Model(nn.Module):
     def __init__(self, config:Config):
         super(Model, self).__init__()
         self.bert = BertModel.from_pretrained(config.bert_path)
-        for param in self.bert.parameters():
-            if isinstance(param, nn.Embedding):
-                param.requires_grad_(False)
-                continue
-            param.requires_grad = True
         self.dropout = nn.Dropout(config.hidden_layer_dropout)
         self.fc = nn.Linear(config.hidden_size, config.num_classes)
+        self.apply(self._init_weights)
+        
+    def _init_weights(self, m):
+        if isinstance(m, nn.Embedding):
+            m.requires_grad_(False)
 
     def forward(self, x):
         context = x[0]  # 输入的句子
