@@ -100,11 +100,11 @@ def test(config, model, test_iter):
     # model.load_state_dict(torch.load(os.path.join(config.save_path, 'best_test.pt')))
     model.eval()
     start_time = time.time()
-    test_acc, test_loss, test_report, test_confusion = evaluate(config, model, test_iter, test=True)
+    test_acc, test_loss, test_f1_score, test_confusion = evaluate(config, model, test_iter, test=True)
     msg = 'Test Loss: {0:>5.2},  Test Acc: {1:>6.2%}'
     print(msg.format(test_loss, test_acc))
-    print("Precision, Recall and F1-Score...")
-    print(test_report)
+    print("F1-Score...")
+    print(test_f1_score)
     print("Confusion Matrix...")
     print(test_confusion)
     time_dif = get_time_dif(start_time)
@@ -128,7 +128,8 @@ def evaluate(config, model, data_iter, test=False):
 
     acc = metrics.accuracy_score(labels_all, predict_all)
     if test:
-        report = metrics.classification_report(labels_all, predict_all, labels=config.class_list, digits=4)
+        # report = metrics.classification_report(labels_all, predict_all, labels=config.class_list, digits=4)
+        f1_score = metrics.f1_score(labels_all, predict_all)
         confusion = metrics.confusion_matrix(labels_all, predict_all)
-        return acc, loss_total / len(data_iter), report, confusion
+        return acc, loss_total / len(data_iter), f1_score, confusion
     return acc, loss_total / len(data_iter)
