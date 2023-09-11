@@ -147,7 +147,8 @@ def get_pattern(stop_words_file, encoding='utf-8'):
     return pa_text
 
 class Reformator(object):
-    def __init__(self, remove_punc=True, stop_words_file=None, stop_words_encoding='utf-8'):
+    def __init__(self, remove_punc=True, stop_words_file=None, stop_words_encoding='utf-8', \
+        addtional_patterns=None):
         '''
         remove_punc 是否删除字符串中的标点符号\n
         stop_words_file 停用词表路径，为None时不使用停用词表\n
@@ -157,6 +158,7 @@ class Reformator(object):
         self.remove_punc = remove_punc
         self.pattern = get_pattern(stop_words_file, stop_words_encoding) \
             if stop_words_file is not None else None
+        self.ap = addtional_patterns
             
     def __call__(self, text:str):
         ''' text 输入中文字符串\n
@@ -166,5 +168,7 @@ class Reformator(object):
         if self.remove_punc:
             text = remove_punctutation(text)
         if self.pattern is not None:
+            text = re.sub(self.pattern, '', text)
+        if self.ap is not None:
             text = re.sub(self.pattern, '', text)
         return text
