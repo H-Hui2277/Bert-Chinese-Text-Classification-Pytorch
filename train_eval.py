@@ -45,9 +45,10 @@ def train(config, model, train_iter, dev_iter, test_iter):
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if 'bert' in n], 'lr': config.learning_rate/10.}, # low learning rate for the pretraining weights.
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}]
+        {'params': [p for n, p in param_optimizer if 'bert' in n], 'lr': config.learning_rate/10., 'weight_decay': 0.01}, # low learning rate for the pretraining weights.
+        # {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        # {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
     # optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     optimizer = BertAdam(optimizer_grouped_parameters,
                          lr=config.learning_rate,
@@ -130,7 +131,7 @@ def evaluate(config, model, data_iter, test=False):
     acc = metrics.accuracy_score(labels_all, predict_all)
     if test:
         # report = metrics.classification_report(labels_all, predict_all, labels=config.class_list, digits=4)
-        f1_score = metrics.f1_score(labels_all, predict_all)
+        f1_score = metrics.f1_score(labels_all, predict_all, average=None)
         confusion = metrics.confusion_matrix(labels_all, predict_all)
         return acc, loss_total / len(data_iter), f1_score, confusion
     return acc, loss_total / len(data_iter)

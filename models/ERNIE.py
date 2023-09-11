@@ -37,8 +37,6 @@ class Model(nn.Module):
     def __init__(self, config:Config):
         super(Model, self).__init__()
         self.bert = BertModel.from_pretrained(config.bert_path)
-        for layer in self.bert.encoder.layer[:4]:
-            layer.requires_grad_(False)
         self.dropout = nn.Dropout(config.hidden_layer_dropout)
         self.fc = nn.Linear(config.hidden_size, config.num_classes)
         self.apply(self._init_weights)
