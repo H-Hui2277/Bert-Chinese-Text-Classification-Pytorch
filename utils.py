@@ -158,7 +158,7 @@ class Reformator(object):
         self.remove_punc = remove_punc
         self.pattern = get_pattern(stop_words_file, stop_words_encoding) \
             if stop_words_file is not None else None
-        self.ap = addtional_patterns
+        self.aps = addtional_patterns
             
     def __call__(self, text:str):
         ''' text 输入中文字符串\n
@@ -169,6 +169,7 @@ class Reformator(object):
             text = remove_punctutation(text)
         if self.pattern is not None:
             text = re.sub(self.pattern, '', text)
-        if self.ap is not None:
-            text = re.sub(self.pattern, '', text)
+        if self.aps is not None:
+            for ap in self.aps:
+                text = re.sub(ap, '', text)
         return text
