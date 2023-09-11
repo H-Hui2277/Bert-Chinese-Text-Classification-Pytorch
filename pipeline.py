@@ -32,7 +32,7 @@ class Predictor(object):
     def __call__(self, text1:str, text2:str, topk=None):
         """ text1 文本1 \n
             text2 文本2 \n
-            topk 预测的topk类别 \n
+            topk 预测的topk类别，为None时即为top1类别 \n
             return 包含预测的topk个类别的列表
         """
         text1, text2 = self.reformator(text1), self.reformator(text2)
