@@ -1,11 +1,13 @@
 # coding: UTF-8
 import time
-from datetime import timedelta
 import pickle
 import os
 import re
+from datetime import timedelta
+from collections import Counter
 
 import torch
+import jieba
 from tqdm import tqdm
 
 
@@ -173,3 +175,38 @@ class Reformator(object):
             for ap in self.aps:
                 text = re.sub(ap, '', text)
         return text
+
+""""高低频词相关方法"""
+def get_freq_words(text, k=5):
+    ''' 获取一段文本中的高频词或低频词
+        text: 输入文本 \n
+        k: 前k个高频词或低频词 \n
+        freq: high\low，对应高频词或低频词
+        return 高频词列表，或低频词类别，或两者
+    '''
+    words = jieba.cut(text)
+    words_count = Counter(words)
+    most_common = words_count.most_common()
+    
+    high_freq_words = [word for word, count in most_common[:k]]
+    low_freq_words = [word for word, count in most_common[-k:]]
+    
+    return high_freq_words, low_freq_words
+
+def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
+    ''' 获取一个文本文件中的高频词或低频词
+        file 文本文件路径
+        encoding 文本文件编码格式
+    '''
+    with open(file, mode='r', encoding=encoding) as f:
+        text = f.read()
+        f.close()
+    
+    text = re.sub('[\s]', '', text) # 去除空白字符，包括空格、回车符等
+    high_freq_words, low_freq_words = get_freq_words(text.strip(), k)
+    if save_file is not None:
+        with open(save_file, mode='w', encoding='utf-8') as f:
+            for word in high_freq_words + low_freq_words:
+                f.write(word)
+            f.close
+    return high_freq_words, low_freq_words
