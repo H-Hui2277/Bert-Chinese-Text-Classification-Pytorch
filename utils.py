@@ -207,6 +207,6 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
     if save_file is not None:
         with open(save_file, mode='w', encoding='utf-8') as f:
             for word in high_freq_words + low_freq_words:
-                f.write(word)
-            f.close
+                f.write(f'{word}\n')
+            f.close()
     return high_freq_words, low_freq_words
