@@ -21,7 +21,7 @@ def seed_freeze(seed):
 if __name__ == '__main__':
     if args.seed is not None:
         seed_freeze(args.seed)
-    dataset = './Dataset_hitu/'  # 数据集
+    dataset = './Dataset_baidu/'  # 数据集
 
     model_name = args.model  # bert
     x = import_module('models.' + model_name)
