@@ -48,7 +48,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
-    # optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    # optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=config.learning_rate)
     optimizer = BertAdam(optimizer_grouped_parameters,
                          lr=config.learning_rate,
                          warmup=0.05,
