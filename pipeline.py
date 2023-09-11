@@ -1,7 +1,8 @@
 import torch
+import time
 
 from models.ERNIE import Config, Model
-from utils import Reformator
+from utils import Reformator, get_time_dif
 
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
 
@@ -11,14 +12,15 @@ class Predictor(object):
         self.device=device
         self.config = Config(dataset)
         self.model = Model(self.config)
-        self.model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
+        if checkpoint is not None:
+            self.model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
         self.model.eval().to(self.device)
 
         self.pad_size = pad_size
         self.reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding)
     
     @torch.no_grad()
-    def __call__(self, text1:str, text2:str):
+    def __call__(self, text1:str, text2:str, topk=None):
         text1, text2 = self.reformator(text1), self.reformator(text2)
         token1 = self.config.tokenizer.tokenize(text1)
         token2 = self.config.tokenizer.tokenize(text2)
@@ -40,14 +42,20 @@ class Predictor(object):
         sample = (x, seq_len, mask)
         
         outputs = self.model(sample)
+        predict_class = []
+        if topk is not None:
+            indices = torch.topk(outputs, k=topk, dim=1)
+            for indice in indices.indices[0]:
+                predict_class.append(self.config.class_list[indice.item()])
+            return predict_class
         predict = torch.argmax(outputs, dim=1).cpu()
-        predict_class = self.config.class_list[predict.item()]
+        predict_class.append(self.config.class_list[predict.item()])
         return predict_class
 
 if __name__ == '__main__':
-    dataset = './Dataset_baidu/'
-    checkpoint = './Dataset_baidu/saved_dict_0909-213159/best_test.pt'
-    device = 'cuda'
+    dataset = './Dataset/'
+    checkpoint = None
+    device = 'cpu'
     text1 = '邮政市场监管'
     text2 = '市民来电其有一个申通西安寄往长沙月日西安发出月日长沙转运中心更新物流快递方反馈未果来电请相关单位核实快递物流长时间未更新'
     pad_size = 128
@@ -57,5 +65,7 @@ if __name__ == '__main__':
     predictor = Predictor(dataset=dataset, checkpoint=checkpoint, device=device, pad_size=pad_size, \
                           remove_punc=remove_punc, stop_words_file=stop_words_file)
     
-    predict_class = predictor(text1, text2)
+    start = time.time()
+    predict_class = predictor(text1, text2, 5)
+    print(get_time_dif(start))
     print(predict_class)
