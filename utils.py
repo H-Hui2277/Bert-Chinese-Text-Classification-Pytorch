@@ -3,10 +3,12 @@ import time
 import pickle
 import os
 import re
+import random
 from datetime import timedelta
 from collections import Counter
 
 import torch
+import pandas as pd
 import jieba
 from tqdm import tqdm
 
@@ -129,9 +131,9 @@ def get_time_dif(start_time):
 
 """字符串预处理工具方法"""
 def remove_punctutation(text):
-    ''' 删除字符串中标点符号
+    ''' 将给定字符串中的非字母数字字符和空白字符删除
     '''
-    return re.sub('[^\w\s]', '', text)
+    return re.sub('[\W\s]', '', text)
 
 def get_pattern(stop_words_file, encoding='utf-8'):
     ''' 读取停用词表\n
@@ -166,7 +168,7 @@ class Reformator(object):
         ''' text 输入中文字符串\n
         return 重新编码后的字符串\n
         '''
-        text = text.strip()
+        text = str(text)
         if self.remove_punc:
             text = remove_punctutation(text)
         if self.pattern is not None:
@@ -210,3 +212,61 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
                 f.write(f'{word}\n')
             f.close()
     return high_freq_words, low_freq_words
+
+"""从原始数据文件中直接构建数据集"""
+def build_dataset(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=True,
+                  remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8', addtional_patterns=None, ):
+    """ 从原始数据文件中构建数据集 \n
+        origin_file 原始数据文件地址 \n
+        save_dir 数据集保存地址 \n
+        train_rate 训练集占比 \n
+        seed 固定随机数种子，使每次划分的结果保持一致 \n
+        pre_loading 预存原始数据为二进制数据，加快后续读取速度 \n
+        else Reformator参数
+    """
+    random.seed(seed)
+    print('loading data...')
+    start_time = time.time()
+    pre_loading_file = origin_file.replace('.xlsx', '.pkl')
+    if pre_loading and os.path.exists(pre_loading_file):
+        with open(pre_loading_file, mode='rb') as f:
+            frame = pickle.load(f)
+    else:
+        frame = pd.read_excel(origin_file, usecols=['接收单位', '案件类型', '来电内容'], dtype=str)
+        with open(pre_loading_file, mode='wb') as f:
+            pickle.dump(frame, f)
+    cost = get_time_dif(start_time)
+    print(f'loading cost {cost} s.')
+    
+    class_list = set(frame['接收单位'])
+    class_dict = {}
+    with open(os.path.join(save_dir, 'class.txt'), mode='w+', encoding='utf-8') as f:
+        for i, cls in enumerate(class_list):
+            class_dict[str(cls)] = i
+            f.write(f'{cls}\n')
+    
+    dlen = len(frame['案件类型'])
+    indices = [i for i in range(dlen)]
+    random.shuffle(indices)
+    train_len = int(dlen * train_rate)
+    dev_len = int(dlen * (1 - train_rate) / 2.)
+    
+    train_file = open(os.path.join(save_dir, 'train.txt'), mode='w+', encoding='utf-8')
+    dev_file = open(os.path.join(save_dir, 'dev.txt'), mode='w+', encoding='utf-8')
+    test_file = open(os.path.join(save_dir, 'test.txt'), mode='w+', encoding='utf-8')
+    
+    reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding, addtional_patterns)
+    
+    for i, indice in tqdm(enumerate(indices)):
+        text1 = reformator(frame['案件类型'][indice])
+        text2 = reformator(frame['来电内容'][indice])
+        label = class_dict[str(frame['接收单位'][indice])]
+        if i <= train_len:
+            train_file.write(f'{text1} {text2} {label}\n')
+        elif i <= train_len + dev_len:
+            dev_file.write(f'{text1} {text2} {label}\n')
+        else :
+            test_file.write(f'{text1} {text2} {label}\n')
+    train_file.close()
+    dev_file.close()
+    test_file.close()
