@@ -214,7 +214,7 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
     return high_freq_words, low_freq_words
 
 """从原始数据文件中直接构建数据集"""
-def build_dataset(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=True,
+def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=True,
                   remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8', addtional_patterns=None, ):
     """ 从原始数据文件中构建数据集 \n
         origin_file 原始数据文件地址 \n

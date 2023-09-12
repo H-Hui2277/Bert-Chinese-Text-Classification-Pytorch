@@ -1,6 +1,6 @@
 import argparse
 
-from utils import build_dataset
+from utils import dataset_transform
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -13,4 +13,4 @@ if __name__ == '__main__':
     origin_file = args.origin_file
     save_dir = args.save_dir
 
-    build_dataset(origin_file, save_dir)
+    dataset_transform(origin_file, save_dir)
