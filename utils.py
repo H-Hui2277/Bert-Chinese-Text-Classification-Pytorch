@@ -275,3 +275,13 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
     test_file.close()
     cost = get_time_dif(start_time)
     print(f'dumping cost {cost} s.')
+
+def top_k_accuracy(y_true, y_pred, k=5):
+    """ Top-k 精度
+        y_true 真实的目标标签
+        y_pred 模型预测的目标标签概率分布
+    """
+    _, pred_indices = torch.topk(y_pred, k, dim=1)
+    correct = torch.sum(torch.eq(pred_indices, y_true.view(-1, 1)).any(dim=1))
+    accuracy = correct.item() / len(y_true)
+    return accuracy
