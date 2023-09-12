@@ -233,8 +233,9 @@ def build_dataset(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=
             frame = pickle.load(f)
     else:
         frame = pd.read_excel(origin_file, usecols=['接收单位', '案件类型', '来电内容'], dtype=str)
-        with open(pre_loading_file, mode='wb') as f:
-            pickle.dump(frame, f)
+        if pre_loading:
+            with open(pre_loading_file, mode='wb') as f:
+                pickle.dump(frame, f)
     cost = get_time_dif(start_time)
     print(f'loading cost {cost} s.')
     
@@ -257,6 +258,8 @@ def build_dataset(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=
     
     reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding, addtional_patterns)
     
+    print('dumping data...')
+    start_time = time.time()
     for i, indice in tqdm(enumerate(indices)):
         text1 = reformator(frame['案件类型'][indice])
         text2 = reformator(frame['来电内容'][indice])
@@ -270,3 +273,5 @@ def build_dataset(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=
     train_file.close()
     dev_file.close()
     test_file.close()
+    cost = get_time_dif(start_time)
+    print(f'dumping cost {cost} s.')
