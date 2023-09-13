@@ -128,9 +128,9 @@ def evaluate(config, model, data_iter, test=False):
             loss = F.cross_entropy(outputs, labels)
             loss_total += loss
             labels = labels.data.cpu().numpy()
-            predic = torch.max(outputs.data, 1)[1].cpu().numpy()
+            predict = torch.max(outputs.data, 1)[1].cpu().numpy()
             labels_all = np.append(labels_all, labels)
-            predict_all = np.append(predict_all, predic)
+            predict_all = np.append(predict_all, predict)
 
     acc = metrics.accuracy_score(labels_all, predict_all)
     if test:
