@@ -5,11 +5,10 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn.parameter import Parameter
 import torch.nn.functional as F
 from sklearn import metrics
 
-from utils import get_time_dif
+from utils import get_time_dif, get_class_balanced_weight
 from pytorch_pretrained.optimization import BertAdam
 
 # 权重初始化，默认xavier
@@ -29,7 +28,6 @@ def init_network(model, method='xavier', exclude='embedding', seed=123):
                 nn.init.constant_(w, 0)
             else:
                 pass
-
 
 def train(config, model, train_iter, dev_iter, test_iter):
     start_time = time.time()
@@ -57,15 +55,18 @@ def train(config, model, train_iter, dev_iter, test_iter):
     dev_best_acc = 0.
     test_best_acc = 0.
     model.train()
+    # NOTE get the balanced weights from the train dataset
+    class_weights = get_class_balanced_weight(config).to(config.device)
+
     for epoch in range(config.num_epochs):
         print('Epoch [{}/{}]'.format(epoch + 1, config.num_epochs))
         for i, (trains, labels) in enumerate(train_iter):
             outputs = model(trains)
             model.zero_grad()
-            # balanced weights
-            class_counts = torch.bincount(labels, minlength=len(config.class_list)).float().to(config.device)
-            total_samples = class_counts.sum()
-            class_weights = total_samples / (len(config.class_list) * class_counts)
+            # NOTE get the balanced weights from a mini-batch
+            # class_counts = torch.bincount(labels, minlength=len(config.class_list)).float().to(config.device)
+            # total_samples = class_counts.sum()
+            # class_weights = total_samples / (len(config.class_list) * class_counts)
 
             loss = F.cross_entropy(outputs, labels, weight=class_weights)
             loss.backward()
@@ -99,7 +100,6 @@ def train(config, model, train_iter, dev_iter, test_iter):
                 model.train()
             total_batch += 1
     test(config, model, test_iter)
-
 
 def test(config, model, test_iter):
     # test

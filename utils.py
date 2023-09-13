@@ -15,60 +15,69 @@ from tqdm import tqdm
 
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
 
+def load_dataset(path, config, pre_loaded=True):
+    contents = []
+    pre_load_path = path.replace('.txt', '.pkl')
+    if pre_loaded:
+        if os.path.exists(pre_load_path):
+            with open(pre_load_path, mode='rb') as f:
+                contents = pickle.load(f)
+                f.close()
+            print(f'Get the data from {pre_load_path}')
+            return contents
+    with open(path, 'r', encoding='UTF-8') as f:
+        for line in tqdm(f):
+            lin = line.strip()
+            if not lin:
+                continue
+            lin_items = lin.split(' ')
+            if len(lin_items) == 2:
+                content, label = lin_items
+                token = config.tokenizer.tokenize(content)
+                token = [CLS] + token
+            elif len(lin_items) == 3:
+                content1, content2, label = lin_items
+                token1 = config.tokenizer.tokenize(content1)
+                token2 = config.tokenizer.tokenize(content2)
+                token = [CLS] + token1 + [SEP] + token2
+            else:
+                raise ValueError(f'{lin_items} is supposed to have 2 or 3 items.')
+            seq_len = len(token)
+            mask = []
+            token_ids = config.tokenizer.convert_tokens_to_ids(token)
+            if config.pad_size:
+                if len(token) < config.pad_size:
+                    mask = [1] * len(token_ids) + [0] * (config.pad_size - len(token))
+                    token_ids += ([0] * (config.pad_size - len(token)))
+                else:
+                    mask = [1] * config.pad_size
+                    token_ids = token_ids[:config.pad_size]
+                    seq_len = config.pad_size
+            contents.append((token_ids, int(label), seq_len, mask))
+    if pre_loaded:
+        with open(pre_load_path, mode='wb') as f:
+            pickle.dump(contents, f)
+            f.close()
+        print(f'Save data to {pre_load_path}')
+    return contents
 
 def build_dataset(config):
-
-    def load_dataset(path, pad_size=32, pre_loaded=True):
-        contents = []
-        pre_load_path = path.replace('.txt', '.pkl')
-        if pre_loaded:
-            if os.path.exists(pre_load_path):
-                with open(pre_load_path, mode='rb') as f:
-                    contents = pickle.load(f)
-                    f.close()
-                print(f'Get the data from {pre_load_path}')
-                return contents
-        with open(path, 'r', encoding='UTF-8') as f:
-            for line in tqdm(f):
-                lin = line.strip()
-                if not lin:
-                    continue
-                lin_items = lin.split(' ')
-                if len(lin_items) == 2:
-                    content, label = lin_items
-                    token = config.tokenizer.tokenize(content)
-                    token = [CLS] + token
-                elif len(lin_items) == 3:
-                    content1, content2, label = lin_items
-                    token1 = config.tokenizer.tokenize(content1)
-                    token2 = config.tokenizer.tokenize(content2)
-                    token = [CLS] + token1 + [SEP] + token2
-                else:
-                    raise ValueError(f'{lin_items} is supposed to have 2 or 3 items.')
-
-                seq_len = len(token)
-                mask = []
-                token_ids = config.tokenizer.convert_tokens_to_ids(token)
-
-                if pad_size:
-                    if len(token) < pad_size:
-                        mask = [1] * len(token_ids) + [0] * (pad_size - len(token))
-                        token_ids += ([0] * (pad_size - len(token)))
-                    else:
-                        mask = [1] * pad_size
-                        token_ids = token_ids[:pad_size]
-                        seq_len = pad_size
-                contents.append((token_ids, int(label), seq_len, mask))
-        if pre_loaded:
-            with open(pre_load_path, mode='wb') as f:
-                pickle.dump(contents, f)
-                f.close()
-            print(f'Save data to {pre_load_path}')
-        return contents
-    train = load_dataset(config.train_path, config.pad_size)
-    dev = load_dataset(config.dev_path, config.pad_size)
-    test = load_dataset(config.test_path, config.pad_size)
+    train = load_dataset(config.train_path, config)
+    dev = load_dataset(config.dev_path, config)
+    test = load_dataset(config.test_path, config)
     return train, dev, test
+
+
+def get_class_balanced_weight(config):
+    """ 计算类别平衡权重
+    """
+    print('computing class balanced weight...')
+    contents = load_dataset(config.train_path, config)
+    class_count = {i:0 for i in range(len(config.class_list))}
+    for x, y, seq_len, mask in contents:
+        class_count[y] += 1
+    count_list = torch.Tensor([v for k, v in class_count.items()]).sqrt()
+    return count_list.sum() / (len(config.class_list) * count_list)
 
 
 class DatasetIterater(object):
@@ -180,11 +189,10 @@ class Reformator(object):
 
 """"高低频词相关方法"""
 def get_freq_words(text, k=5):
-    ''' 获取一段文本中的高频词或低频词
+    ''' 获取一段文本中的高频词或低频词\n
         text: 输入文本 \n
         k: 前k个高频词或低频词 \n
-        freq: high\low，对应高频词或低频词
-        return 高频词列表，或低频词类别，或两者
+        return 高低频词列表
     '''
     words = jieba.cut(text)
     words_count = Counter(words)
@@ -196,9 +204,9 @@ def get_freq_words(text, k=5):
     return high_freq_words, low_freq_words
 
 def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
-    ''' 获取一个文本文件中的高频词或低频词
-        file 文本文件路径
-        encoding 文本文件编码格式
+    ''' 获取一个文本文件中的高频词或低频词 \n
+        file 文本文件路径 \n
+        encoding 文本文件编码格式 
     '''
     with open(file, mode='r', encoding=encoding) as f:
         text = f.read()
@@ -277,8 +285,8 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
     print(f'dumping cost {cost} s.')
 
 def top_k_accuracy(y_true, y_pred, k=5):
-    """ Top-k 精度
-        y_true 真实的目标标签
+    """ Top-k 精度 \n
+        y_true 真实的目标标签 \n
         y_pred 模型预测的目标标签概率分布
     """
     _, pred_indices = torch.topk(y_pred, k, dim=1)
