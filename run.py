@@ -14,11 +14,13 @@ parser.add_argument('--model', type=str, default='ERNIE', help='choose a model: 
 parser.add_argument('--seed', type=int, default=1108, help='use seed to freeze the result')
 args = parser.parse_args()
 
+
 def seed_freeze(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
+
 
 if __name__ == '__main__':
     if args.seed is not None:
