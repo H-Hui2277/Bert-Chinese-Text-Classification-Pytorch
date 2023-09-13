@@ -5,23 +5,12 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
 import torch.nn.functional as F
 from sklearn import metrics
 
 from utils import get_time_dif
 from pytorch_pretrained.optimization import BertAdam
-
-class ClassBalancedLoss(nn.Module):
-    def __init__(self, beta=0.999):
-        super(ClassBalancedLoss, self).__init__()
-        self.beta = beta
-
-    def forward(self, inputs, targets):
-        num_classes = inputs.shape[1]
-        weights = (1 - self.beta) / (1 - self.beta ** torch.arange(0, num_classes))
-        weights = weights / torch.sum(weights) * num_classes
-        loss = nn.CrossEntropyLoss(weight=weights)(inputs, targets)
-        return loss
 
 # 权重初始化，默认xavier
 def init_network(model, method='xavier', exclude='embedding', seed=123):
@@ -73,7 +62,12 @@ def train(config, model, train_iter, dev_iter, test_iter):
         for i, (trains, labels) in enumerate(train_iter):
             outputs = model(trains)
             model.zero_grad()
-            loss = F.cross_entropy(outputs, labels)
+            # balanced weights
+            class_counts = torch.bincount(labels, minlength=len(config.class_list)).float().to(config.device)
+            total_samples = class_counts.sum()
+            class_weights = total_samples / (len(config.class_list) * class_counts)
+
+            loss = F.cross_entropy(outputs, labels, weight=class_weights)
             loss.backward()
             optimizer.step()
             if total_batch % 1000 == 0 and total_batch != 0:
