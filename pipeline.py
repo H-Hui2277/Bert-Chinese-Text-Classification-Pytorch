@@ -6,8 +6,10 @@ from utils import Reformator, get_time_dif
 
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
 
+
 class Predictor(object):
-    def __init__(self, dataset='./Dataset_baidu/', checkpoint='./Dataset_baidu/saved_dict_0909-213159/best_test.pt', device='cuda', pad_size=128, 
+    def __init__(self, dataset='./Dataset_baidu/', checkpoint='./Dataset_baidu/saved_dict_0909-213159/best_test.pt',
+                 device='cuda', pad_size=128,
                  remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8', additional_patterns=None):
         """ dataset 数据集地址，用于获取分类标签 \n
             checkpoint 权重保存地址，一般存于数据集对应的下级目录 \n
@@ -18,7 +20,7 @@ class Predictor(object):
             stop_words_file_encoding 停用词表的编码格式 \n
             addtional_pattern 删除额外的字符或符号使用的正则表达式 \n
         """
-        self.device=device
+        self.device = device
         self.config = Config(dataset)
         self.model = Model(self.config)
         if checkpoint is not None:
@@ -26,10 +28,11 @@ class Predictor(object):
         self.model.eval().to(self.device)
 
         self.pad_size = pad_size
-        self.reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding, addtional_patterns=additional_patterns)
-    
+        self.reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding,
+                                     addtional_patterns=additional_patterns)
+
     @torch.no_grad()
-    def __call__(self, text1:str, text2:str, topk=None):
+    def __call__(self, text1: str, text2: str, topk=None):
         """ text1 文本1 \n
             text2 文本2 \n
             topk 预测的topk类别，为None时即为top1类别 \n
@@ -54,7 +57,7 @@ class Predictor(object):
         seq_len = torch.LongTensor(seq_len).view(1, -1).to(self.device)
         mask = torch.LongTensor(mask).view(1, -1).to(self.device)
         sample = (x, seq_len, mask)
-        
+
         outputs = self.model(sample)
         predict_class = []
         if topk is not None:
@@ -66,6 +69,7 @@ class Predictor(object):
         predict_class.append(self.config.class_list[predict.item()])
         return predict_class
 
+
 if __name__ == '__main__':
     dataset = './Dataset/'
     checkpoint = None
@@ -76,7 +80,7 @@ if __name__ == '__main__':
 
     predictor = Predictor(dataset=dataset, checkpoint=checkpoint, device=device, pad_size=pad_size, \
                           remove_punc=remove_punc, stop_words_file=stop_words_file)
-    
+
     start = time.time()
     text1 = '邮政市场监管'
     text2 = '市民来电其有一个申通西安寄往长沙月日西安发出月日长沙转运中心更新物流快递方反馈未果来电请相关单位核实快递物流长时间未更新'
