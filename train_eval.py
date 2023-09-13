@@ -63,7 +63,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
             outputs = model(trains)
             model.zero_grad()
             # balanced weights
-            class_counts = torch.bincount(labels, minlength=67).float().to(config.device)
+            class_counts = torch.bincount(labels, minlength=len(config.class_list)).float().to(config.device)
             total_samples = class_counts.sum()
             class_weights = total_samples / (len(config.class_list) * class_counts)
 
