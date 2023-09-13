@@ -78,7 +78,7 @@ if __name__ == '__main__':
     remove_punc = True
     stop_words_file = None
 
-    predictor = Predictor(dataset=dataset, checkpoint=checkpoint, device=device, pad_size=pad_size, \
+    predictor = Predictor(dataset=dataset, checkpoint=checkpoint, device=device, pad_size=pad_size,
                           remove_punc=remove_punc, stop_words_file=stop_words_file)
 
     start = time.time()
