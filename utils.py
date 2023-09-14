@@ -6,6 +6,8 @@ import re
 import random
 from datetime import timedelta
 from collections import Counter
+import chardet
+from chardet.universaldetector import UniversalDetector
 
 import torch
 import pandas as pd
@@ -13,6 +15,30 @@ import jieba
 from tqdm import tqdm
 
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
+
+
+def get_file_encoding(file_path):
+    """ 获取文本文件编码 [全部读取] \n
+        file_path 文件路径 \n
+    """
+    with open(file_path, 'rb') as file:
+        raw_data = file.read()
+        encoding = chardet.detect(raw_data).get('encoding')
+    return encoding
+
+
+def get_file_encoding_detector(file_path):
+    """ 获取文本文件编码 [部分读取] \n
+        file_path 文件路径 \n
+    """
+    detector = UniversalDetector()
+    with open(file_path, 'rb') as f:
+        for line in f:
+            detector.feed(line)
+            if detector.done:
+                break
+    detector.close()
+    return detector.result['encoding']
 
 
 def load_dataset(path, config, get_contents_from_presaved_file=True):
@@ -161,11 +187,12 @@ class RegexDeletionTool(object):
         return text
 
 
-def get_pattern(stop_words_file, encoding='utf-8'):
+def get_pattern(stop_words_file):
     """ 读取停用词表\n
     stop_words_file 停用词表路径\n
     return 停用词表的正则表达式\n
     """
+    encoding = get_file_encoding_detector(stop_words_file)
     with open(stop_words_file, mode='r', encoding=encoding) as f:
         words = f.readlines()
         f.close()
@@ -180,7 +207,7 @@ def get_pattern(stop_words_file, encoding='utf-8'):
 
 class Reformator(object):
     def __init__(self, remove_punc=True, remove_numbers=True, remove_characters=True,
-                 stop_words_file=None, stop_words_encoding='utf-8', additional_patterns=None):
+                 stop_words_file=None, additional_patterns=None):
         """
         remove_punc 是否删除字符串中的标点符号\n
         stop_words_file 停用词表路径，为None时不使用停用词表\n
@@ -188,7 +215,7 @@ class Reformator(object):
         return 返回重新编码后的字符串
         """
         self.regex_tool = RegexDeletionTool(remove_punc, remove_numbers, remove_characters)
-        self.pattern = get_pattern(stop_words_file, stop_words_encoding) \
+        self.pattern = get_pattern(stop_words_file) \
             if stop_words_file is not None else None
         self.aps = additional_patterns
 
@@ -249,8 +276,7 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
 
 def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_contents_from_presaved_file=True,
                       remove_punc=True, remove_numbers=True, remove_characters=True,
-                      stop_words_file=None, stop_words_file_encoding='utf-8',
-                      remove_high_and_low_freq_words=True, remove_from_presaved_file=True, k=5):
+                      stop_words_file=None, remove_high_and_low_freq_words=True, remove_from_presaved_file=True, k=5):
     """ 从原始数据文件中构建数据集 \n
         origin_file 原始数据文件地址 \n
         save_dir 数据集保存地址 \n
@@ -331,7 +357,7 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_cont
     test_file = open(os.path.join(save_dir, 'test.txt'), mode='w+', encoding='utf-8')
 
     reformator = Reformator(remove_punc, remove_numbers, remove_characters,
-                            stop_words_file, stop_words_file_encoding, additional_patterns)
+                            stop_words_file, additional_patterns)
 
     print('dumping data...')
     start_time = time.time()
