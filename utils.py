@@ -277,7 +277,12 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
 def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_contents_from_presaved_file=True,
                       remove_punc=True, remove_numbers=True, remove_characters=True,
                       stop_words_file=None, remove_high_and_low_freq_words=True, remove_from_presaved_file=True, k=5):
-    """ 从原始数据文件中构建数据集 \n
+    """ 
+        从原始数据文件中构建数据集，建议构造如下
+        - Dataset
+            - data.xlsx 原始数据文件
+            - data 处理后的数据集保存地址
+            
         origin_file 原始数据文件地址 \n
         save_dir 数据集保存地址 \n
         train_rate 训练集占比 \n
@@ -287,8 +292,8 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_cont
         remove_numbers 删除数字 \n
         remove_characters 删除字母 \n
         stop_words_file 停用词表 \n
-        stop_words_file_encoding 停用词表编码格式 \n
-        remove_high_and_low_freq_words 删除高频词和低频词 \n
+
+        remove_high_and_low_freq_words 删除高频词和低频词 NOTE [未经过测试，效果不确定] \n
         remove_from_presaved_file 从预存的高低频词文件中删除高低频词 \n
         k 分别删除高、低频词的个数 \n
     """

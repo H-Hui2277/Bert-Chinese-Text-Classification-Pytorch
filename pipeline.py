@@ -9,15 +9,16 @@ PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert�
 
 class Predictor(object):
     def __init__(self, dataset='./Dataset_baidu/', checkpoint='./Dataset_baidu/saved_dict_0909-213159/best_test.pt',
-                 device='cuda', pad_size=128,
-                 remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8', additional_patterns=None):
-        """ dataset 数据集地址，用于获取分类标签 \n
+                 device='cuda', pad_size=128, remove_punc=True, remove_numbers=True, remove_characters=True, stop_words_file=None, additional_patterns=None):
+        """ 预测工具 \n
+            dataset 数据集地址，用于获取分类标签 \n
             checkpoint 权重保存地址，一般存于数据集对应的下级目录 \n
             device cpu/cuda \n
             pad_size 句子填充的最大长度 \n
-            remove_punc 是否删除句子中的标点符号 \n
+            remove_punc 删除非字母数字的字符 \n
+            remove_numbers 删除数字 \n
+            remove_characters 删除字符 \n
             stop_words_file 使用的停用词表地址，为None时不使用 \n
-            stop_words_file_encoding 停用词表的编码格式 \n
             addtional_pattern 删除额外的字符或符号使用的正则表达式 \n
         """
         self.device = device
@@ -28,8 +29,7 @@ class Predictor(object):
         self.model.eval().to(self.device)
 
         self.pad_size = pad_size
-        self.reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding,
-                                     additional_patterns=additional_patterns)
+        self.reformator = Reformator(remove_punc, remove_numbers, remove_characters, stop_words_file, additional_patterns)
 
     @torch.no_grad()
     def __call__(self, text1: str, text2: str, topk=None):
@@ -76,10 +76,12 @@ if __name__ == '__main__':
     device = 'cpu'
     pad_size = 128
     remove_punc = True
+    remove_numbers = True
+    remove_characters = True
     stop_words_file = None
 
-    predictor = Predictor(dataset=dataset, checkpoint=checkpoint, device=device, pad_size=pad_size,
-                          remove_punc=remove_punc, stop_words_file=stop_words_file)
+    predictor = Predictor(dataset=dataset, checkpoint=checkpoint, device=device, pad_size=pad_size, remove_punc=remove_punc, 
+                          remove_numbers=remove_numbers, remove_characters=remove_characters, stop_words_file=stop_words_file)
 
     start = time.time()
     text1 = '邮政市场监管'
