@@ -15,16 +15,15 @@ from tqdm import tqdm
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
 
 
-def load_dataset(path, config, pre_loaded=True):
+def load_dataset(path, config, get_contents_from_presaved_file=True):
     contents = []
-    pre_load_path = path.replace('.txt', '.pkl')
-    if pre_loaded:
-        if os.path.exists(pre_load_path):
-            with open(pre_load_path, mode='rb') as f:
-                contents = pickle.load(f)
-                f.close()
-            print(f'Get the data from {pre_load_path}')
-            return contents
+    presaved_file_path = path.replace('.txt', '.pkl')
+    if get_contents_from_presaved_file and os.path.exists(presaved_file_path):
+        with open(presaved_file_path, mode='rb') as f:
+            contents = pickle.load(f)
+            f.close()
+        print(f'Get the data from {presaved_file_path}')
+        return contents
     with open(path, 'r', encoding='UTF-8') as f:
         for line in tqdm(f):
             lin = line.strip()
@@ -54,11 +53,11 @@ def load_dataset(path, config, pre_loaded=True):
                     token_ids = token_ids[:config.pad_size]
                     seq_len = config.pad_size
             contents.append((token_ids, int(label), seq_len, mask))
-    if pre_loaded:
-        with open(pre_load_path, mode='wb') as f:
-            pickle.dump(contents, f)
-            f.close()
-        print(f'Save data to {pre_load_path}')
+            contents.append((token_ids, int(label), seq_len, mask))
+    with open(presaved_file_path, mode='wb') as f:
+        pickle.dump(contents, f)
+        f.close()
+    print(f'Presave data to {presaved_file_path}')
     return contents
 
 
@@ -170,12 +169,12 @@ def get_pattern(stop_words_file, encoding='utf-8'):
     with open(stop_words_file, mode='r', encoding=encoding) as f:
         words = f.readlines()
         f.close()
-    pa_text = ''
+    pa_text = None
     for word in words:
         reword = re.sub('[\W\s]', '', word)
         if reword == '':
             continue
-        pa_text = f'{reword}|{pa_text}'
+        pa_text = f'{reword}|{pa_text}' if pa_text is not None else f'{reword}'
     return pa_text
 
 
@@ -235,7 +234,7 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
         text = f.read()
         f.close()
 
-    text = re.sub('[\s]', '', text)  # 去除空白字符，包括空格、回车符等
+    text = re.sub('\s', '', text)  # 去除空白字符，包括空格、回车符等
     high_freq_words, low_freq_words = get_freq_words(text.strip(), k)
     if save_file is not None:
         with open(save_file, mode='w', encoding='utf-8') as f:
@@ -257,7 +256,7 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_cont
         save_dir 数据集保存地址 \n
         train_rate 训练集占比 \n
         seed 固定随机数种子，使每次划分的结果保持一致 \n
-        pre_loading 预存原始数据为二进制数据，加快后续读取速度 \n
+        get_contents_from_presaved_file 预存原始数据为二进制数据，加快后续读取速度 \n
         remove_punc 删除字母数字外的标点符号 \n
         remove_numbers 删除数字 \n
         remove_characters 删除字母 \n
@@ -265,7 +264,7 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_cont
         stop_words_file_encoding 停用词表编码格式 \n
         remove_high_and_low_freq_words 删除高频词和低频词 \n
         remove_from_presaved_file 从预存的高低频词文件中删除高低频词 \n
-        k 高、低频词各删除的个数 \n
+        k 分别删除高、低频词的个数 \n
     """
     random.seed(seed)
     print('loading data...')
@@ -312,9 +311,10 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_cont
                 pickle.dump(high_low_freq_words, f)
 
         print(f'high and low freq words list: {high_low_freq_words}')
-        additional_patterns = ''
+        additional_patterns = None
         for word in high_low_freq_words:
-            additional_patterns = f'{word}|{additional_patterns}'
+            additional_patterns = f'{word}|{additional_patterns}' \
+                if additional_patterns is not None else f'{word}'
         print(additional_patterns)
         print(f'loading high and low freq words cost {get_time_dif(start_time)} s.')
     else:
