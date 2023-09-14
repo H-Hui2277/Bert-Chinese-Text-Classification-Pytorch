@@ -142,7 +142,7 @@ def get_time_dif(start_time):
 
 
 class RegexDeletionTool(object):
-    def __int__(self, remove_punctuations, remove_numbers, remove_characters):
+    def __init__(self, remove_punctuations, remove_numbers, remove_characters):
         """ 正则删除工具 \n
             remove_punctuations 删除非字符数字的字符 \n
             remove_numbers 删除数字 \n
@@ -249,8 +249,9 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
 
 
 def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=True,
-                      remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8',
-                      addtional_patterns=None, ):
+                      remove_punc=True, remove_numbers=True, remove_characters=True,
+                      stop_words_file=None, stop_words_file_encoding='utf-8',
+                      remove_high_and_low_freq_words=True, k=5):
     """ 从原始数据文件中构建数据集 \n
         origin_file 原始数据文件地址 \n
         save_dir 数据集保存地址 \n
@@ -281,6 +282,27 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
             class_dict[str(cls)] = i
             f.write(f'{cls}\n')
 
+    if remove_high_and_low_freq_words:
+        print('loading high and low freq words')
+        start_time = time.time()
+        words_counter = Counter()
+        regex_deletion_tool = RegexDeletionTool(True, True, True)
+        for seq in frame['来电内容']:
+            words = jieba.cut(regex_deletion_tool(seq))
+            words_counter.update(words)
+        most_common = words_counter.most_common()
+        high_freq_words = [word for word, count in most_common[:k]]
+        low_freq_words = [word for word, count in most_common[-k:]]
+        print(f'high freq words list: {high_freq_words}')
+        print(f'low freq words list: {low_freq_words}')
+        additional_patterns = ''
+        for word in high_freq_words + low_freq_words:
+            additional_patterns = f'{word}|{additional_patterns}'
+        print(additional_patterns)
+        print(f'loading high and low freq words cost {get_time_dif(start_time)} s.')
+    else:
+        additional_patterns = None
+
     dlen = len(frame['案件类型'])
     indices = [i for i in range(dlen)]
     random.shuffle(indices)
@@ -291,7 +313,8 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
     dev_file = open(os.path.join(save_dir, 'dev.txt'), mode='w+', encoding='utf-8')
     test_file = open(os.path.join(save_dir, 'test.txt'), mode='w+', encoding='utf-8')
 
-    reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding, addtional_patterns)
+    reformator = Reformator(remove_punc, remove_numbers, remove_characters,
+                            stop_words_file, stop_words_file_encoding, additional_patterns)
 
     print('dumping data...')
     start_time = time.time()
