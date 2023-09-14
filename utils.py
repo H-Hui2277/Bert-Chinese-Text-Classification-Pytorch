@@ -248,29 +248,36 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
 """从原始数据文件中直接构建数据集"""
 
 
-def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=True,
+def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, get_contents_from_presaved_file=True,
                       remove_punc=True, remove_numbers=True, remove_characters=True,
                       stop_words_file=None, stop_words_file_encoding='utf-8',
-                      remove_high_and_low_freq_words=True, k=5):
+                      remove_high_and_low_freq_words=True, remove_from_presaved_file=True, k=5):
     """ 从原始数据文件中构建数据集 \n
         origin_file 原始数据文件地址 \n
         save_dir 数据集保存地址 \n
         train_rate 训练集占比 \n
         seed 固定随机数种子，使每次划分的结果保持一致 \n
         pre_loading 预存原始数据为二进制数据，加快后续读取速度 \n
-        else Reformator参数
+        remove_punc 删除字母数字外的标点符号 \n
+        remove_numbers 删除数字 \n
+        remove_characters 删除字母 \n
+        stop_words_file 停用词表 \n
+        stop_words_file_encoding 停用词表编码格式 \n
+        remove_high_and_low_freq_words 删除高频词和低频词 \n
+        remove_from_presaved_file 从预存的高低频词文件中删除高低频词 \n
+        k 高、低频词各删除的个数 \n
     """
     random.seed(seed)
     print('loading data...')
     start_time = time.time()
-    pre_loading_file = origin_file.replace('.xlsx', '.pkl')
-    if pre_loading and os.path.exists(pre_loading_file):
-        with open(pre_loading_file, mode='rb') as f:
+    presaved_file = origin_file.replace('.xlsx', '.pkl')
+    if get_contents_from_presaved_file and os.path.exists(presaved_file):
+        with open(presaved_file, mode='rb') as f:
             frame = pickle.load(f)
     else:
         frame = pd.read_excel(origin_file, usecols=['接收单位', '案件类型', '来电内容'], dtype=str)
-        if pre_loading:
-            with open(pre_loading_file, mode='wb') as f:
+        if get_contents_from_presaved_file:
+            with open(presaved_file, mode='wb') as f:
                 pickle.dump(frame, f)
     cost = get_time_dif(start_time)
     print(f'loading cost {cost} s.')
@@ -285,18 +292,28 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
     if remove_high_and_low_freq_words:
         print('loading high and low freq words')
         start_time = time.time()
-        words_counter = Counter()
-        regex_deletion_tool = RegexDeletionTool(True, True, True)
-        for seq in frame['来电内容']:
-            words = jieba.cut(regex_deletion_tool(seq))
-            words_counter.update(words)
-        most_common = words_counter.most_common()
-        high_freq_words = [word for word, count in most_common[:k]]
-        low_freq_words = [word for word, count in most_common[-k:]]
-        print(f'high freq words list: {high_freq_words}')
-        print(f'low freq words list: {low_freq_words}')
+        words_presaved_file = os.path.join(save_dir, 'high_low_freq_words.pkl')
+        if remove_from_presaved_file and os.path.exists(words_presaved_file):
+            print(f'loading from presaved file {words_presaved_file}')
+            with open(words_presaved_file, mode='rb') as f:
+                high_low_freq_words = pickle.load(f)
+        else:
+            words_counter = Counter()
+            regex_deletion_tool = RegexDeletionTool(True, True, True)
+            for seq in frame['来电内容']:
+                words = jieba.cut(regex_deletion_tool(seq))
+                words_counter.update(words)
+            most_common = words_counter.most_common()
+            high_freq_words = [word for word, count in most_common[:k]]
+            low_freq_words = [word for word, count in most_common[-k:]]
+            print(f'pre saved words to file {words_presaved_file}')
+            with open(words_presaved_file, mode='wb') as f:
+                high_low_freq_words = low_freq_words + high_freq_words
+                pickle.dump(high_low_freq_words, f)
+
+        print(f'high and low freq words list: {high_low_freq_words}')
         additional_patterns = ''
-        for word in high_freq_words + low_freq_words:
+        for word in high_low_freq_words:
             additional_patterns = f'{word}|{additional_patterns}'
         print(additional_patterns)
         print(f'loading high and low freq words cost {get_time_dif(start_time)} s.')
