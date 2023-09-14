@@ -12,8 +12,8 @@ import pandas as pd
 import jieba
 from tqdm import tqdm
 
-
 PAD, CLS, SEP, UNK = '[PAD]', '[CLS]', '[SEP]', '[UNK]'  # padding符号, bert中综合信息符号
+
 
 def load_dataset(path, config, pre_loaded=True):
     contents = []
@@ -61,6 +61,7 @@ def load_dataset(path, config, pre_loaded=True):
         print(f'Save data to {pre_load_path}')
     return contents
 
+
 def build_dataset(config):
     train = load_dataset(config.train_path, config)
     dev = load_dataset(config.dev_path, config)
@@ -73,14 +74,14 @@ def get_class_balanced_weight(config):
     """
     print('computing class balanced weight...')
     contents = load_dataset(config.train_path, config)
-    class_count = {i:0 for i in range(len(config.class_list))}
+    class_count = {i: 0 for i in range(len(config.class_list))}
     for x, y, seq_len, mask in contents:
         class_count[y] += 1
     count_list = torch.Tensor([v for k, v in class_count.items()]).sqrt()
     return count_list.sum() / (len(config.class_list) * count_list)
 
 
-class DatasetIterater(object):
+class DatasetIterator(object):
     def __init__(self, batches, batch_size, device):
         self.batch_size = batch_size
         self.batches = batches
@@ -127,8 +128,7 @@ class DatasetIterater(object):
 
 
 def build_iterator(dataset, config):
-    iter = DatasetIterater(dataset, config.batch_size, config.device)
-    return iter
+    return DatasetIterator(dataset, config.batch_size, config.device)
 
 
 def get_time_dif(start_time):
@@ -139,47 +139,66 @@ def get_time_dif(start_time):
 
 
 """字符串预处理工具方法"""
-def remove_punctutation(text):
-    ''' 将给定字符串中的非字母数字字符和空白字符删除
-    '''
-    return re.sub('[\W\s]', '', text)
+
+
+class RegexDeletionTool(object):
+    def __int__(self, remove_punctuations, remove_numbers, remove_characters):
+        """ 正则删除工具 \n
+            remove_punctuations 删除非字符数字的字符 \n
+            remove_numbers 删除数字 \n
+            remove_characters 删除字母 \n
+        """
+        self._rp = remove_punctuations
+        self._rn = remove_numbers
+        self._rc = remove_characters
+
+    def __call__(self, text):
+        if self._rp:
+            text = re.sub('[\W\s]', '', text)
+        if self._rn:
+            text = re.sub(r'[0-9]', '', text)
+        if self._rc:
+            text = re.sub(r'[a-zA-Z]', '', text)
+        return text
+
 
 def get_pattern(stop_words_file, encoding='utf-8'):
-    ''' 读取停用词表\n
+    """ 读取停用词表\n
     stop_words_file 停用词表路径\n
     return 停用词表的正则表达式\n
-    '''
+    """
     with open(stop_words_file, mode='r', encoding=encoding) as f:
         words = f.readlines()
         f.close()
     pa_text = ''
     for word in words:
-        if remove_punctutation(word).strip() == '':
+        reword = re.sub('[\W\s]', '', word)
+        if reword == '':
             continue
-        pa_text = f'{word.strip()}|{pa_text}'
+        pa_text = f'{reword}|{pa_text}'
     return pa_text
 
+
 class Reformator(object):
-    def __init__(self, remove_punc=True, stop_words_file=None, stop_words_encoding='utf-8', \
-        addtional_patterns=None):
-        '''
+    def __init__(self, remove_punc=True, remove_numbers=True, remove_characters=True,
+                 stop_words_file=None, stop_words_encoding='utf-8', additional_patterns=None):
+        """
         remove_punc 是否删除字符串中的标点符号\n
         stop_words_file 停用词表路径，为None时不使用停用词表\n
         stop_words_encoding 停用词表的编码格式\n
         return 返回重新编码后的字符串
-        '''
-        self.remove_punc = remove_punc
+        """
+        self.regex_tool = RegexDeletionTool(remove_punc, remove_numbers, remove_characters)
         self.pattern = get_pattern(stop_words_file, stop_words_encoding) \
             if stop_words_file is not None else None
-        self.aps = addtional_patterns
-            
-    def __call__(self, text:str):
-        ''' text 输入中文字符串\n
+        self.aps = additional_patterns
+
+    def __call__(self, text: str):
+        """ text 输入中文字符串\n
         return 重新编码后的字符串\n
-        '''
+        """
         text = str(text)
-        if self.remove_punc:
-            text = remove_punctutation(text)
+        text = self.regex_tool(text)
         if self.pattern is not None:
             text = re.sub(self.pattern, '', text)
         if self.aps is not None:
@@ -187,32 +206,36 @@ class Reformator(object):
                 text = re.sub(ap, '', text)
         return text
 
+
 """"高低频词相关方法"""
+
+
 def get_freq_words(text, k=5):
-    ''' 获取一段文本中的高频词或低频词\n
+    """ 获取一段文本中的高频词或低频词\n
         text: 输入文本 \n
         k: 前k个高频词或低频词 \n
         return 高低频词列表
-    '''
+    """
     words = jieba.cut(text)
     words_count = Counter(words)
     most_common = words_count.most_common()
-    
+
     high_freq_words = [word for word, count in most_common[:k]]
     low_freq_words = [word for word, count in most_common[-k:]]
-    
+
     return high_freq_words, low_freq_words
 
+
 def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
-    ''' 获取一个文本文件中的高频词或低频词 \n
+    """ 获取一个文本文件中的高频词或低频词 \n
         file 文本文件路径 \n
-        encoding 文本文件编码格式 
-    '''
+        encoding 文本文件编码格式
+    """
     with open(file, mode='r', encoding=encoding) as f:
         text = f.read()
         f.close()
-    
-    text = re.sub('[\s]', '', text) # 去除空白字符，包括空格、回车符等
+
+    text = re.sub('[\s]', '', text)  # 去除空白字符，包括空格、回车符等
     high_freq_words, low_freq_words = get_freq_words(text.strip(), k)
     if save_file is not None:
         with open(save_file, mode='w', encoding='utf-8') as f:
@@ -221,9 +244,13 @@ def get_freq_words_from_file(file, encoding='utf-8', k=5, save_file=None):
             f.close()
     return high_freq_words, low_freq_words
 
+
 """从原始数据文件中直接构建数据集"""
+
+
 def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_loading=True,
-                  remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8', addtional_patterns=None, ):
+                      remove_punc=True, stop_words_file=None, stop_words_file_encoding='utf-8',
+                      addtional_patterns=None, ):
     """ 从原始数据文件中构建数据集 \n
         origin_file 原始数据文件地址 \n
         save_dir 数据集保存地址 \n
@@ -246,26 +273,26 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
                 pickle.dump(frame, f)
     cost = get_time_dif(start_time)
     print(f'loading cost {cost} s.')
-    
+
     class_list = set(frame['接收单位'])
     class_dict = {}
     with open(os.path.join(save_dir, 'class.txt'), mode='w+', encoding='utf-8') as f:
         for i, cls in enumerate(class_list):
             class_dict[str(cls)] = i
             f.write(f'{cls}\n')
-    
+
     dlen = len(frame['案件类型'])
     indices = [i for i in range(dlen)]
     random.shuffle(indices)
     train_len = int(dlen * train_rate)
     dev_len = int(dlen * (1 - train_rate) / 2.)
-    
+
     train_file = open(os.path.join(save_dir, 'train.txt'), mode='w+', encoding='utf-8')
     dev_file = open(os.path.join(save_dir, 'dev.txt'), mode='w+', encoding='utf-8')
     test_file = open(os.path.join(save_dir, 'test.txt'), mode='w+', encoding='utf-8')
-    
+
     reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding, addtional_patterns)
-    
+
     print('dumping data...')
     start_time = time.time()
     for i, indice in tqdm(enumerate(indices)):
@@ -276,13 +303,14 @@ def dataset_transform(origin_file, save_dir, train_rate=0.8, seed=1108, pre_load
             train_file.write(f'{text1} {text2} {label}\n')
         elif i <= train_len + dev_len:
             dev_file.write(f'{text1} {text2} {label}\n')
-        else :
+        else:
             test_file.write(f'{text1} {text2} {label}\n')
     train_file.close()
     dev_file.close()
     test_file.close()
     cost = get_time_dif(start_time)
     print(f'dumping cost {cost} s.')
+
 
 def top_k_accuracy(y_true, y_pred, k=5):
     """ Top-k 精度 \n

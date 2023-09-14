@@ -29,7 +29,7 @@ class Predictor(object):
 
         self.pad_size = pad_size
         self.reformator = Reformator(remove_punc, stop_words_file, stop_words_file_encoding,
-                                     addtional_patterns=additional_patterns)
+                                     additional_patterns=additional_patterns)
 
     @torch.no_grad()
     def __call__(self, text1: str, text2: str, topk=None):

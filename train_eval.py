@@ -11,6 +11,7 @@ from sklearn import metrics
 from utils import get_time_dif, get_class_balanced_weight
 from pytorch_pretrained.optimization import BertAdam
 
+
 # 权重初始化，默认xavier
 def init_network(model, method='xavier', exclude='embedding', seed=123):
     for name, w in model.named_parameters():
@@ -28,6 +29,7 @@ def init_network(model, method='xavier', exclude='embedding', seed=123):
                 nn.init.constant_(w, 0)
             else:
                 pass
+
 
 def train(config, model, train_iter, dev_iter, test_iter):
     start_time = time.time()
@@ -74,8 +76,8 @@ def train(config, model, train_iter, dev_iter, test_iter):
             if total_batch % 1000 == 0 and total_batch != 0:
                 # 每多少轮输出在训练集和验证集上的效果
                 true = labels.data.cpu()
-                predic = torch.max(outputs.data, 1)[1].cpu()
-                train_acc = metrics.accuracy_score(true, predic)
+                predict = torch.max(outputs.data, 1)[1].cpu()
+                train_acc = metrics.accuracy_score(true, predict)
 
                 improve = ''
                 dev_acc, dev_loss = evaluate(config, model, dev_iter)
@@ -90,8 +92,10 @@ def train(config, model, train_iter, dev_iter, test_iter):
                     improve += '^'
 
                 time_dif = get_time_dif(start_time)
-                msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%}, Test Loss: {5:>5.2}, Test Acc: {6:>6.2%}  Time: {7} {8}'
-                msg = msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, test_loss, test_acc, time_dif, improve)
+                msg = ('Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: '
+                       '{4:>6.2%}, Test Loss: {5:>5.2}, Test Acc: {6:>6.2%}  Time: {7} {8}')
+                msg = msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, test_loss, test_acc, time_dif,
+                                 improve)
                 # Log
                 with open(config.log_file, mode='a+') as f:
                     f.write(f'{msg}\n')
@@ -100,6 +104,7 @@ def train(config, model, train_iter, dev_iter, test_iter):
                 model.train()
             total_batch += 1
     test(config, model, test_iter)
+
 
 def test(config, model, test_iter):
     # test
