@@ -63,7 +63,6 @@ class BertDataset(Dataset):
     def __init__(self, config:Config, mode='train'):
         super().__init__()
         self.config = config
-        self.device = config.device
         self.contents = self.load_dataset(mode)
     
     def load_dataset(self, mode):
@@ -88,11 +87,11 @@ class BertDataset(Dataset):
         seq = seq1 + SEP + seq2
 
         encodings = self.config.tokenizer.encode_plus(
-            seq, padding='max_length', truncation=True, max_length=self.config.pad_size, return_tensors='pt')
+            seq, padding='max_length', truncation=True, max_length=self.config.pad_size, return_tensors='pt').to(self.config.device)
         return encodings.input_ids.squeeze(0), \
             encodings.attention_mask.squeeze(0), \
                 encodings.token_type_ids.squeeze(0), \
-                    torch.LongTensor([int(label)])
+                    torch.LongTensor([int(label)]).to(self.config.device)
 
 class BertTrainer(object):
     def __init__(self, config:Config, model:Model):
