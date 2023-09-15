@@ -1,7 +1,6 @@
 # coding: UTF-8
 import time
 import os
-import pickle
 
 import torch
 import torch.nn as nn
@@ -14,18 +13,19 @@ from transformers import BertModel, BertTokenizer, AdamW
 
 
 class Config(object):
-    """配置参数"""
-
     def __init__(self, dataset):
+        """ 配置参数
+        """
         self.model_name = 'ERNIE'
-        self.train_path = dataset + '/data/train.txt'  # 训练集
-        self.dev_path = dataset + '/data/dev.txt'  # 验证集
-        self.test_path = dataset + '/data/test.txt'  # 测试集
+        self.train_path = os.path.join(dataset, 'data', 'train.txt') # 训练集
+        self.dev_path = os.path.join(dataset, 'data', 'dev.txt') # 验证集
+        self.test_path = os.path.join(dataset, 'data', 'test.txt') # 测试集
+        class_list_path = os.path.join(dataset, 'data', 'class.txt')
         self.class_list = [x.strip() for x in open(
-            dataset + '/data/class.txt', encoding='utf-8').readlines()]  # 类别名单
-        self.save_path = dataset + f'/saved_dict_{time.strftime("%m%d-%H%M%S")}/'  # 模型训练结果
+            class_list_path, encoding='utf-8').readlines()] # 类别名单
+        self.save_path = os.path.join(dataset, f'saved_dict_{time.strftime("%m%d-%H%M%S")}') # 模型训练结果
         self.log_file = os.path.join(self.save_path, 'log.txt')
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # 设备
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # 设备
 
         self.num_classes = len(self.class_list)  # 类别数
         self.num_epochs = 3  # epoch数
