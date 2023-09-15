@@ -48,11 +48,18 @@ class Model(nn.Module):
         self.dropout = nn.Dropout(config.hidden_layer_dropout)
         self.fc = nn.Linear(config.hidden_size, config.num_classes)
 
-    def forward(self, input_ids, attention_mask, token_type_ids):
+    def forward(self, input_ids, attention_mask, token_type_ids, output_attentions=False):
+        """ input_ids 输入句子ids \n
+            attention_mask 权重掩码 \n
+            token_type_ids Token ids \n
+            output_attentions 返回注意力权重[所有layers] \n
+        """
         outputs = self.bert(input_ids, attention_mask, token_type_ids)
         pooled = outputs.pooler_output
         pooled = self.dropout(pooled)
         out = self.fc(pooled)
+        if output_attentions :
+            return out, outputs.attentions
         return out
 
 
@@ -66,6 +73,8 @@ class BertDataset(Dataset):
         self.contents = self.load_dataset(mode)
     
     def load_dataset(self, mode):
+        """ 加载数据集
+        """
         if mode == 'train':
             path = self.config.train_path
         elif mode == 'dev':
@@ -121,6 +130,9 @@ class BertTrainer(object):
         self.test_best_acc = 0.
     
     def save_model(self, name='best_test.pt'):
+        """ 保存模型 至以下路径
+            - save_path / name
+        """
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
         torch.save(self.model.state_dict(), os.path.join(self.save_path, name))
@@ -132,6 +144,8 @@ class BertTrainer(object):
     
     @torch.enable_grad()
     def train(self):
+        """ 训练
+        """
         for epoch in range(self.num_epochs):
             print(self.log('Epoch [{}/{}]'.format(epoch + 1, self.num_epochs)))
             for input_ids, attention_mask, token_type_ids, labels in tqdm(self.dataloaders['train']):
@@ -164,6 +178,8 @@ class BertTrainer(object):
     
     @torch.no_grad()
     def evaluate(self, data_loader:DataLoader):
+        """ 验证/测试
+        """
         self.model.eval()
         loss_total = 0
         predict_all = np.array([], dtype=int)
