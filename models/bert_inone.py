@@ -196,3 +196,29 @@ class BertTrainer(object):
 
         acc = metrics.accuracy_score(labels_all, predict_all)
         return acc, loss_total / len(data_loader)
+    
+
+class BertPipeline(object):
+    def __init__(self, config:Config, model_path:str):
+        config = config
+        self.model = Model(config)
+        checkpoint = torch.load(model_path, map_location='cpu')
+        self.model.load_state_dict(checkpoint).to(config.device)
+        self.model.eval()
+        
+        self.tokenizer = config.tokenizer
+        self.class_list = config.class_list
+    
+    @torch.no_grad()
+    def __call__(self, text, topk=1):
+        inputs = self.tokenizer.encode_plus(text)
+        output = self.model(**inputs)
+        
+        predict_class = []
+        indices = torch.topk(output, k=topk, dim=1)
+        for indice in indices.indices[0]:
+            predict_class.append(self.class_list[indice.item()])
+        
+        if topk == 1:
+            return predict_class[0]
+        return predict_class
