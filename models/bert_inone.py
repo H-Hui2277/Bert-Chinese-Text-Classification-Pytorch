@@ -1,11 +1,13 @@
 # coding: UTF-8
 import time
 import os
+import re
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from chardet.universaldetector import UniversalDetector
 import numpy as np
 from sklearn import metrics
 from tqdm import tqdm
@@ -121,6 +123,7 @@ class BertDataset(Dataset):
                 encodings.token_type_ids.squeeze(0), \
                     torch.LongTensor([int(label)]).to(self.config.device)
 
+
 class BertTrainer(object):
     def __init__(self, config:Config, model:Model):
         self.dataloaders = {
@@ -147,6 +150,7 @@ class BertTrainer(object):
         self.total_steps = 0
         self.dev_best_acc = 0.
         self.test_best_acc = 0.
+        self.log_file = config.log_file
     
     def save_model(self, name='best_test.pt'):
         """ 保存模型 至以下路径
@@ -157,7 +161,7 @@ class BertTrainer(object):
         torch.save(self.model.state_dict(), os.path.join(self.save_path, name))
     
     def log(self, msg):
-        with open(os.path.join(self.save_path, 'log.txt'), mode='w+') as f:
+        with open(self.log_file, mode='a+') as f:
             f.write(f'{msg}\n')
         return msg
     
@@ -240,3 +244,66 @@ class BertPipeline(object):
         if topk == 1:
             return predict_class[0]
         return predict_class
+
+
+def get_file_encoding_detector(file_path):
+    """ 获取文本文件编码 [部分读取]
+    ------
+    file_path 文件路径 \n
+    """
+    detector = UniversalDetector()
+    with open(file_path, 'rb') as f:
+        for line in f:
+            detector.feed(line)
+            if detector.done:
+                break
+    detector.close()
+    return detector.result['encoding']
+
+
+def get_pattern(stop_words_file):
+    """ 读取停用词表
+    ------
+    stop_words_file 停用词表路径\n
+    return 停用词表的正则表达式\n
+    """
+    encoding = get_file_encoding_detector(stop_words_file)
+    with open(stop_words_file, mode='r', encoding=encoding) as f:
+        words = f.readlines()
+        f.close()
+    pa_text = None
+    for word in words:
+        reword = re.sub('[\W\s]', '', word)
+        if reword == '':
+            continue
+        pa_text = f'{reword}|{pa_text}' if pa_text is not None else f'{reword}'
+    return pa_text
+
+    
+class Reformator(object):
+    def __init__(self, remove_punc=True, remove_numbers=True, remove_character=True, stop_words_file='./Stop_Words_Baidu.txt'):
+        """ 字符串格式化工具
+        ------
+        remove_punc 是否删除字母、数字外标点符号 \n
+        remove_numbers 是否删除数字 \n
+        remove_characters 是否删除标点符号 \n
+        stop_words_file 停用词表[为None时停用] \n
+        """
+        self.remove_punc = remove_punc
+        self.remove_numbers = remove_numbers
+        self.remove_characters = remove_character
+        self.stop_words_file_pattern = get_pattern(stop_words_file) if stop_words_file is not None else None
+        
+    def __call__(self, text):
+        """ text 输入文本
+        """
+        if self.remove_punc:
+            text = re.sub(r'[\W\s]', '', text)
+        if self.remove_numbers:
+            text = re.sub(r'[0-9]', '', text)
+        if self.remove_characters:
+            text = re.sub(r'[a-zA-Z]', '', text)
+        if self.stop_words_file_pattern is not None:
+            text = re.sub(self.stop_words_file_pattern, '', text)
+        return text
+        
