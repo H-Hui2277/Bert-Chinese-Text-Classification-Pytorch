@@ -13,31 +13,50 @@ from transformers import BertModel, BertTokenizer, AdamW
 
 
 class Config(object):
-    def __init__(self, dataset):
+    def __init__(self, dataset, device='cuda', num_epochs=3, val_steps=1000, 
+                 batch_size=32, pad_size=128, learning_rate=1e-5, 
+                 bert_path='./bert_pretrain/', hidden_layer_dropout=0.2, hidden_size=768):
         """ 配置参数
+            ---------
+            dataset 数据集路径，数据集架构如下
+            - dataset 
+                - data
+                    - class.txt
+                    - train.txt
+                    - dev.txt
+                    - text.txt
+            device cuda or cpu \n
+            num_epochs 训练轮数 \n
+            val_steps 每隔val_steps验证&测试一次 \n
+            batch_size 批量大小 \n
+            pad_size 句子裁剪长度 \n
+            learning_rate 学习率 \n
+            bert_path 预训练bert模型地址 \n
+            hidden_layer_dropout 输出层的dropout率 \n
+            hidden_size bert输出中pooler_output的最后维度数[根据预训练模型确定] \n
         """
-        self.model_name = 'ERNIE'
-        self.train_path = os.path.join(dataset, 'data', 'train.txt') # 训练集
-        self.dev_path = os.path.join(dataset, 'data', 'dev.txt') # 验证集
-        self.test_path = os.path.join(dataset, 'data', 'test.txt') # 测试集
+        self.model_name = 'BERT'
+        self.train_path = os.path.join(dataset, 'data', 'train.txt')
+        self.dev_path = os.path.join(dataset, 'data', 'dev.txt')
+        self.test_path = os.path.join(dataset, 'data', 'test.txt')
         class_list_path = os.path.join(dataset, 'data', 'class.txt')
         self.class_list = [x.strip() for x in open(
-            class_list_path, encoding='utf-8').readlines()] # 类别名单
-        self.save_path = os.path.join(dataset, f'saved_dict_{time.strftime("%m%d-%H%M%S")}') # 模型训练结果
+            class_list_path, encoding='utf-8').readlines()]
+        self.save_path = os.path.join(dataset, f'saved_dict_{time.strftime("%m%d-%H%M%S")}')
         self.log_file = os.path.join(self.save_path, 'log.txt')
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # 设备
+        self.device = torch.device(device)
 
-        self.num_classes = len(self.class_list)  # 类别数
-        self.num_epochs = 3  # epoch数
-        self.val_steps = 1000 # 每隔val_steps在开发集和测试集上验证一次
+        self.num_classes = len(self.class_list) 
+        self.num_epochs = num_epochs 
+        self.val_steps = val_steps 
         
-        self.batch_size = 32  # mini-batch大小
-        self.pad_size = 128  # 每句话处理成的长度(短填长切)
-        self.learning_rate = 1e-5  # 学习率
-        self.bert_path = './ERNIE_pretrain'
+        self.batch_size = batch_size 
+        self.pad_size = pad_size 
+        self.learning_rate = learning_rate 
+        self.bert_path = bert_path
         self.tokenizer:BertTokenizer = BertTokenizer.from_pretrained(self.bert_path)
-        self.hidden_layer_dropout = 0.2
-        self.hidden_size = 768
+        self.hidden_layer_dropout = hidden_layer_dropout
+        self.hidden_size = hidden_size
 
 
 class Model(nn.Module):
@@ -184,15 +203,14 @@ class BertTrainer(object):
         loss_total = 0
         predict_all = np.array([], dtype=int)
         labels_all = np.array([], dtype=int)
-        with torch.no_grad():
-            for input_ids, attention_mask, token_type_ids, labels in data_loader:
-                outputs = self.model(input_ids, attention_mask, token_type_ids)
-                loss = F.cross_entropy(outputs, labels)
-                loss_total += loss
-                labels = labels.data.cpu().numpy()
-                predict = torch.max(outputs.data, 1)[1].cpu().numpy()
-                labels_all = np.append(labels_all, labels)
-                predict_all = np.append(predict_all, predict)
+        for input_ids, attention_mask, token_type_ids, labels in data_loader:
+            outputs = self.model(input_ids, attention_mask, token_type_ids)
+            loss = F.cross_entropy(outputs, labels)
+            loss_total += loss
+            labels = labels.data.cpu().numpy()
+            predict = torch.max(outputs.data, 1)[1].cpu().numpy()
+            labels_all = np.append(labels_all, labels)
+            predict_all = np.append(predict_all, predict)
 
         acc = metrics.accuracy_score(labels_all, predict_all)
         return acc, loss_total / len(data_loader)
