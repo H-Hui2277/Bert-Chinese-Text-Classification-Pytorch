@@ -281,7 +281,7 @@ def get_pattern(stop_words_file):
 
     
 class Reformator(object):
-    def __init__(self, remove_punc=True, remove_numbers=True, remove_character=True, stop_words_file='./Stop_Words_Baidu.txt'):
+    def __init__(self, remove_punc=True, remove_numbers=True, remove_character=True, stop_words_file=None):
         """ 字符串格式化工具
         ------
         remove_punc 是否删除字母、数字外标点符号 \n
